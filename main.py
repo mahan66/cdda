@@ -48,15 +48,30 @@ for cnt in range(200,2001,200):
     for j in range(30):
         print('\tj='+str(j))
         N1 = N2 = cnt
-        XT = [np.random.normal(mu_xt, sigma_xt, dim) for i in range(4000)]
-        beta = np.random.normal(mu_beta, sigma_beta, dim)
-        RT = np.random.normal(mu_rt, sigma_rt, 1)
-        YT = np.dot(XT, beta)+RT
-        XS1 = [np.random.normal(mu_xs1, sigma_xs1, dim) for i in range(N1)]
-        RS1 = np.random.normal(mu_rs1, sigma_rs1, 1)
-        YS1 = np.dot(XS1, beta)+RS1
-        XS2 = [np.random.normal(mu_xs2, sigma_xs2, dim) for i in range(N2)]
-        YS2 = np.dot(XS2, beta)+RS1
+
+        XT = []
+        YT = []
+        for i in range(4000):
+            XT.append(np.random.normal(mu_xt, sigma_xt, dim))
+            betaT = np.random.normal(mu_beta, sigma_beta, dim)
+            RT = np.random.normal(mu_rt, sigma_rt, 1)
+            YT.append(np.dot(XT[-1], betaT)+RT)
+
+        XS1 = []
+        YS1 = []
+        for i in range(N1):
+            betaS1 = np.random.normal(mu_beta, sigma_beta, dim)
+            RS1 = np.random.normal(mu_rs1, sigma_rs1, 1)
+            XS1.append(np.random.normal(mu_xs1, sigma_xs1, dim))
+            YS1.append(np.dot(XS1[-1], betaS1)+RS1)
+
+        XS2 = []
+        YS2 = []
+        for i in range(N2):
+            betaS2 = np.random.normal(mu_beta, sigma_beta, dim)
+            RS2 = np.random.normal(mu_rs1, sigma_rs1, 1)
+            XS2.append(np.random.normal(mu_xs2, sigma_xs2, dim))
+            YS2.append(np.dot(XS2[-1], betaS2)+RS2)
 
         result = minimize(empirical_risk, np.zeros(dim+1), args=(XS1, XS2, YS1, YS2, ws[2]))
         ES = result.fun
@@ -68,6 +83,19 @@ for cnt in range(200,2001,200):
 
         avg += np.abs(ES-ET)
         print("Result:", ES, ET, np.abs(ES-ET))
+
+        plt.plot(XS1, YS1, label='S1')
+        #plt.plot(XS2, YS2, label='S2')
+        #plt.plot(XT, YT, label='T')
+        xx = np.arange(-4,4,0.01)
+        yy = []
+        for i in range(len(xx)):
+            yy.append(g(W, [xx[i]]))
+        plt.plot(xx, yy)
+        plt.legend()
+        plt.show()
+
+        temp=0
 
     discrepancies.append(avg/30)
 
