@@ -3,6 +3,7 @@ import scipy as sp
 from scipy.optimize import minimize
 from sklearn import linear_model
 import matplotlib.pyplot as plt
+from numpy.polynomial.polynomial import polyval
 
 
 def loss(prediction, target):
@@ -10,6 +11,8 @@ def loss(prediction, target):
 
 
 def g(W, X):
+    #res = polyval(X, W)
+    #return res
     return np.dot(W[:len(X)], X)+W[len(X)]
 
 
@@ -37,26 +40,28 @@ mu_rs1, sigma_rs1 = 0, 0.5
 mu_xs2, sigma_xs2 = 2, 0.5
 
 source_sizes = []
-discrepancies = []
+discrepancies = {0:[], 1:[], 2:[], 3:[]}
 
 dim = 1
 
+XT = []
+YT = []
+for i in range(4000):
+    XT.append(np.random.normal(mu_xt, sigma_xt, dim))
+    betaT = np.random.normal(mu_beta, sigma_beta, dim)
+    RT = np.random.normal(mu_rt, sigma_rt, 1)
+    YT.append(np.dot(XT[-1], betaT) + RT)
+
+XT = np.divide(XT-np.min(XT), np.max(XT)-np.min(XT))
+YT = np.divide(YT-np.min(YT), np.max(YT)-np.min(YT))
+
 for cnt in range(200,2001,200):
     print('cnt='+str(cnt))
-    avg = 0
+    avg={0:0, 1:0, 2:0, 3:0}
     source_sizes.append(cnt*2)
     for j in range(30):
         print('\tj='+str(j))
         N1 = N2 = cnt
-
-        XT = []
-        YT = []
-        for i in range(4000):
-            XT.append(np.random.normal(mu_xt, sigma_xt, dim))
-            betaT = np.random.normal(mu_beta, sigma_beta, dim)
-            RT = np.random.normal(mu_rt, sigma_rt, 1)
-            YT.append(np.dot(XT[-1], betaT)+RT)
-
         XS1 = []
         YS1 = []
         for i in range(N1):
@@ -64,6 +69,10 @@ for cnt in range(200,2001,200):
             RS1 = np.random.normal(mu_rs1, sigma_rs1, 1)
             XS1.append(np.random.normal(mu_xs1, sigma_xs1, dim))
             YS1.append(np.dot(XS1[-1], betaS1)+RS1)
+
+        XS1 = np.divide(XS1-np.min(XS1), np.max(XS1)-np.min(XS1))
+        YS1 = np.divide(YS1-np.min(YS1), np.max(YS1)-np.min(YS1))
+
 
         XS2 = []
         YS2 = []
@@ -73,32 +82,49 @@ for cnt in range(200,2001,200):
             XS2.append(np.random.normal(mu_xs2, sigma_xs2, dim))
             YS2.append(np.dot(XS2[-1], betaS2)+RS2)
 
-        result = minimize(empirical_risk, np.zeros(dim+1), args=(XS1, XS2, YS1, YS2, ws[2]))
-        ES = result.fun
-        W = result.x
-        ET = 0
-        for i in range(len(XT)):
-            ET += loss(g(W, XT[i]), YT[i])
-        ET /= len(XT)
+        XS2 = np.divide(XS2-np.min(XS2), np.max(XS2)-np.min(XS2))
+        YS2 = np.divide(YS2-np.min(YS2), np.max(YS2)-np.min(YS2))
 
-        avg += np.abs(ES-ET)
-        print("Result:", ES, ET, np.abs(ES-ET))
+        degree = 3
+        for kk in range(len(ws)):
+            result = minimize(empirical_risk, np.zeros(dim+1), args=(XS1, XS2, YS1, YS2, ws[kk]))
+            ES = result.fun
+            W = result.x
+            #ES = empirical_risk(W, XS1, XS2, YS1, YS2, ws[2])
+            ET = 0
+            for i in range(len(XT)):
+                ET += loss(g(W, XT[i]), YT[i])
+            ET /= len(XT)
 
-        plt.plot(XS1, YS1, label='S1')
-        #plt.plot(XS2, YS2, label='S2')
-        #plt.plot(XT, YT, label='T')
-        xx = np.arange(-4,4,0.01)
-        yy = []
-        for i in range(len(xx)):
-            yy.append(g(W, [xx[i]]))
-        plt.plot(xx, yy)
-        plt.legend()
-        plt.show()
+            # ES1 = 0
+            # for i in range(len(XS1)):
+            #     ES1 += loss(g(W, XS1[i]), YS1[i])
+            # for i in range(len(XS2)):
+            #     ES1 += loss(g(W, XS2[i]), YS2[i])
+            # ES1 /= (2*len(XS1))
 
-        temp=0
+            avg[kk] += np.abs(ES-ET)
+            print("Result:", ES, ET, np.abs(ES-ET))
+            # plt.scatter(XT, YT, label='T')
+            #
+            # plt.scatter(XS1, YS1, label='S1')
+            # plt.scatter(XS2, YS2, label='S2')
+            # xx = np.arange(-4,4,0.01)
+            # yy = []
+            # for i in range(len(xx)):
+            #    yy.append(g(W, [xx[i]]))
+            # plt.plot(xx, yy)
+            # plt.legend()
+            # plt.show()
 
-    discrepancies.append(avg/30)
+            temp=0
 
-plt.plot(source_sizes, discrepancies)
+    for kk in range(len(ws)):
+        print("w=",ws[kk],"mean discrepancy: ",avg[kk]/30)
+        discrepancies[kk].append(avg[kk]/30)
+
+for kk in range(len(ws)):
+    plt.plot(source_sizes, discrepancies[kk], label='W='+str(ws[kk]))
+plt.legend()
 plt.show()
 tmp = 0
